@@ -29,6 +29,12 @@
             background: #fff;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             cursor: pointer;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flashcard.flip {
+            transform: rotateY(180deg);
         }
 
         .flashcard p {
@@ -86,7 +92,7 @@
 
         let cards = defaultCards;
         let index = 0;
-        let stage = 0; // 0:hint1,1:hint2,2:sentence blank,3:reveal+practice
+        let stage = 0; // 0:question,1:hint1,2:hint2+sentence blank,3:reveal
 
         const cardEl = document.getElementById('card');
         const csvInput = document.getElementById('csvInput');
@@ -124,41 +130,88 @@
         function render() {
             const c = cards[index];
             if (!c) { cardEl.textContent = 'No cards'; return; }
-            let html = `<p>${c.hint1}</p>`;
-            if (stage >= 1) {
-                html += `<p>${c.hint2}</p>`;
-            }
-            if (stage >= 2) {
-                const reveal = stage >= 3;
-                html += `<p>${blankSentence(c.sentence, c.question, reveal)}</p>`;
-            }
-            if (stage >= 3) {
-                html += `<p class="question">${c.question}</p>`;
-                if (c.practice) html += `<p>${c.practice}</p>`;
+            let html = '';
+            switch (stage) {
+                case 0:
+                    html += `<p class="question">${c.question}</p>`;
+                    break;
+                case 1:
+                    html += `<p>${c.hint1}</p>`;
+                    break;
+                case 2:
+                    html += `<p>${c.hint1}</p>`;
+                    html += `<p>${c.hint2}</p>`;
+                    html += `<p>${blankSentence(c.sentence, c.question, false)}</p>`;
+                    break;
+                default:
+                    html += `<p>${c.hint1}</p>`;
+                    html += `<p>${c.hint2}</p>`;
+                    html += `<p>${blankSentence(c.sentence, c.question, true)}</p>`;
+                    html += `<p class="question">${c.question}</p>`;
+                    if (c.practice) html += `<p>${c.practice}</p>`;
+                    break;
             }
             cardEl.innerHTML = html;
         }
 
-        cardEl.addEventListener('click', () => {
-            stage++;
-            if (stage > 3) {
-                stage = 0;
-                index = (index + 1) % cards.length;
-            }
-            render();
-        });
+        const flipDuration = 600; // ms
 
-        document.getElementById('next').addEventListener('click', () => {
+        function flipTo(nextStage) {
+            cardEl.classList.add('flip');
+            setTimeout(() => {
+                stage = nextStage;
+                render();
+                cardEl.classList.remove('flip');
+            }, flipDuration / 2);
+        }
+
+        function nextCard() {
             index = (index + 1) % cards.length;
             stage = 0;
             render();
-        });
+        }
 
-        document.getElementById('prev').addEventListener('click', () => {
+        function prevCard() {
             index = (index - 1 + cards.length) % cards.length;
             stage = 0;
             render();
+        }
+
+        cardEl.addEventListener('click', () => {
+            if (stage < 3) {
+                flipTo(stage + 1);
+            } else {
+                flipTo(0);
+                setTimeout(nextCard, flipDuration / 2);
+            }
         });
+
+        let startX = null;
+        const swipeThreshold = 30;
+
+        cardEl.addEventListener('touchstart', (e) => {
+            if (e.changedTouches && e.changedTouches.length > 0) {
+                startX = e.changedTouches[0].clientX;
+            }
+        });
+
+        cardEl.addEventListener('touchend', (e) => {
+            if (startX === null) return;
+            const diff = e.changedTouches[0].clientX - startX;
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff < 0) {
+                    nextCard();
+                } else {
+                    prevCard();
+                }
+            } else {
+                cardEl.click();
+            }
+            startX = null;
+        });
+
+        document.getElementById('next').addEventListener('click', nextCard);
+        document.getElementById('prev').addEventListener('click', prevCard);
 
         render();
     </script>
