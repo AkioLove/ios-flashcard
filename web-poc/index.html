@@ -92,7 +92,7 @@
 
         let cards = defaultCards;
         let index = 0;
-        let stage = 0; // 0:question,1:hint1,2:hint2+sentence blank,3:reveal
+        let stage = 0; // 0:question,1:hint1,2:hint2,3:sentence blank,4:reveal
 
         const cardEl = document.getElementById('card');
         const csvInput = document.getElementById('csvInput');
@@ -139,15 +139,14 @@
                     html += `<p>${c.hint1}</p>`;
                     break;
                 case 2:
-                    html += `<p>${c.hint1}</p>`;
                     html += `<p>${c.hint2}</p>`;
+                    break;
+                case 3:
                     html += `<p>${blankSentence(c.sentence, c.question, false)}</p>`;
                     break;
                 default:
-                    html += `<p>${c.hint1}</p>`;
-                    html += `<p>${c.hint2}</p>`;
-                    html += `<p>${blankSentence(c.sentence, c.question, true)}</p>`;
                     html += `<p class="question">${c.question}</p>`;
+                    html += `<p>${blankSentence(c.sentence, c.question, true)}</p>`;
                     if (c.practice) html += `<p>${c.practice}</p>`;
                     break;
             }
@@ -155,30 +154,35 @@
         }
 
         const flipDuration = 600; // ms
+        let flipped = false;
 
         function flipTo(nextStage) {
-            cardEl.classList.add('flip');
+            flipped = !flipped;
+            cardEl.classList.toggle('flip', flipped);
             setTimeout(() => {
                 stage = nextStage;
                 render();
-                cardEl.classList.remove('flip');
             }, flipDuration / 2);
         }
 
         function nextCard() {
             index = (index + 1) % cards.length;
             stage = 0;
+            flipped = false;
+            cardEl.classList.remove('flip');
             render();
         }
 
         function prevCard() {
             index = (index - 1 + cards.length) % cards.length;
             stage = 0;
+            flipped = false;
+            cardEl.classList.remove('flip');
             render();
         }
 
         cardEl.addEventListener('click', () => {
-            if (stage < 3) {
+            if (stage < 4) {
                 flipTo(stage + 1);
             } else {
                 flipTo(0);
