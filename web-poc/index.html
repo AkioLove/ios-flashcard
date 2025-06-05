@@ -21,45 +21,29 @@
         }
 
         .flashcard {
-            width: 300px;
-            height: 180px;
-            perspective: 1000px;
+            width: 320px;
+            min-height: 220px;
             margin: 20px auto;
+            padding: 20px;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             cursor: pointer;
         }
 
-        .flashcard > div {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.6s;
+        .flashcard p {
+            margin: 10px 0;
+            font-size: 1.2em;
         }
 
-        .flashcard > div.flipped {
-            transform: rotateY(180deg);
+        .flashcard .question {
+            font-weight: bold;
+            font-size: 1.4em;
+            color: #333;
         }
 
-        .front, .back {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            font-size: 1.5em;
-        }
-
-        .front {
-            background: #fff;
-        }
-
-        .back {
-            background: #fffae6;
-            transform: rotateY(180deg);
+        #csvInput {
+            margin-top: 10px;
         }
 
         .controls button {
@@ -81,12 +65,8 @@
 <body>
     <div id="app">
         <h1>Vocabulary Flashcards</h1>
-        <div class="flashcard">
-            <div>
-                <div class="front"></div>
-                <div class="back"></div>
-            </div>
-        </div>
+        <input type="file" id="csvInput" accept=".csv" />
+        <div class="flashcard" id="card"></div>
         <div class="controls">
             <button id="prev">Previous</button>
             <button id="next">Next</button>
@@ -94,71 +74,89 @@
     </div>
 
     <script>
-        const words = [
-            { word: 'school', definition: 'a place where children go to learn' },
-            { word: 'children', definition: 'young people who are not yet adults' },
-            { word: 'learn', definition: 'to gain knowledge or skill' },
-            { word: 'read', definition: 'to look at and understand written words' },
-            { word: 'write', definition: 'to form letters or words on a surface' },
-            { word: 'math', definition: 'the study of numbers and shapes' },
-            { word: 'science', definition: 'the study of the natural world' },
-            { word: 'history', definition: 'the study of past events' },
-            { word: 'teacher', definition: 'a person who helps students learn' },
-            { word: 'homework', definition: 'schoolwork done at home' }
+        const defaultCards = [
+            {
+                question: 'example',
+                hint1: 'a simple sample word',
+                hint2: '範例；ex- 向外 + ample 大量的',
+                sentence: 'This is just an example for you.',
+                practice: '這只是給你的例子。'
+            }
         ];
 
+        let cards = defaultCards;
         let index = 0;
-        let flipped = false;
+        let stage = 0; // 0:hint1,1:hint2,2:sentence blank,3:reveal+practice
 
-        const flashcard = document.querySelector('.flashcard');
-        const cardInner = flashcard.firstElementChild;
-        const front = cardInner.querySelector('.front');
-        const back = cardInner.querySelector('.back');
+        const cardEl = document.getElementById('card');
+        const csvInput = document.getElementById('csvInput');
 
-        function render() {
-            const word = words[index];
-            front.textContent = word.word;
-            back.textContent = word.definition;
-            cardInner.classList.toggle('flipped', flipped);
+        csvInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                cards = parseCSV(reader.result);
+                index = 0;
+                stage = 0;
+                render();
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSV(text) {
+            const lines = text.trim().split(/\r?\n/);
+            const headers = lines[0].split(',');
+            return lines.slice(1).map(l => {
+                const values = l.split(',');
+                const obj = {};
+                headers.forEach((h,i) => obj[h.trim()] = values[i] ? values[i].trim() : '');
+                return obj;
+            });
         }
 
-        flashcard.addEventListener('click', () => {
-            flipped = !flipped;
+        function blankSentence(sentence, word, reveal) {
+            const re = new RegExp('\\b' + word + '\\b', 'gi');
+            const replaced = reveal ? `<span class="question">${word}</span>` : '___';
+            return sentence.replace(re, replaced);
+        }
+
+        function render() {
+            const c = cards[index];
+            if (!c) { cardEl.textContent = 'No cards'; return; }
+            let html = `<p>${c.hint1}</p>`;
+            if (stage >= 1) {
+                html += `<p>${c.hint2}</p>`;
+            }
+            if (stage >= 2) {
+                const reveal = stage >= 3;
+                html += `<p>${blankSentence(c.sentence, c.question, reveal)}</p>`;
+            }
+            if (stage >= 3) {
+                html += `<p class="question">${c.question}</p>`;
+                if (c.practice) html += `<p>${c.practice}</p>`;
+            }
+            cardEl.innerHTML = html;
+        }
+
+        cardEl.addEventListener('click', () => {
+            stage++;
+            if (stage > 3) {
+                stage = 0;
+                index = (index + 1) % cards.length;
+            }
             render();
         });
 
-        let startX = null;
-        const swipeThreshold = 30; // minimum px distance to count as swipe
-
-        flashcard.addEventListener('touchstart', (e) => {
-            if (e.changedTouches && e.changedTouches.length > 0) {
-                startX = e.changedTouches[0].clientX;
-            }
-        });
-
-        flashcard.addEventListener('touchend', (e) => {
-            if (startX === null) return;
-            const endX = e.changedTouches[0].clientX;
-            const diff = endX - startX;
-            if (Math.abs(diff) > swipeThreshold) {
-                if (diff > 0) {
-                    document.getElementById('next').click();
-                } else {
-                    document.getElementById('prev').click();
-                }
-            }
-            startX = null;
-        });
-
         document.getElementById('next').addEventListener('click', () => {
-            index = (index + 1) % words.length;
-            flipped = false;
+            index = (index + 1) % cards.length;
+            stage = 0;
             render();
         });
 
         document.getElementById('prev').addEventListener('click', () => {
-            index = (index - 1 + words.length) % words.length;
-            flipped = false;
+            index = (index - 1 + cards.length) % cards.length;
+            stage = 0;
             render();
         });
 
