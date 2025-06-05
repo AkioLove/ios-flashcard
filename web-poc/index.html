@@ -126,6 +126,29 @@
             render();
         });
 
+        let startX = null;
+        const swipeThreshold = 30; // minimum px distance to count as swipe
+
+        flashcard.addEventListener('touchstart', (e) => {
+            if (e.changedTouches && e.changedTouches.length > 0) {
+                startX = e.changedTouches[0].clientX;
+            }
+        });
+
+        flashcard.addEventListener('touchend', (e) => {
+            if (startX === null) return;
+            const endX = e.changedTouches[0].clientX;
+            const diff = endX - startX;
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    document.getElementById('next').click();
+                } else {
+                    document.getElementById('prev').click();
+                }
+            }
+            startX = null;
+        });
+
         document.getElementById('next').addEventListener('click', () => {
             index = (index + 1) % words.length;
             flipped = false;
