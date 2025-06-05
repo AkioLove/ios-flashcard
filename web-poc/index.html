@@ -76,24 +76,19 @@
             background-color: #f0f0f0;
         }
     </style>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 </head>
 <body>
     <div id="app">
         <h1>Vocabulary Flashcards</h1>
-        <div class="flashcard" v-if="currentWord" @click="flipCard">
-            <div :class="{flipped: flipped}">
-                <div class="front">
-                    {{ currentWord.word }}
-                </div>
-                <div class="back">
-                    {{ currentWord.definition }}
-                </div>
+        <div class="flashcard">
+            <div>
+                <div class="front"></div>
+                <div class="back"></div>
             </div>
         </div>
         <div class="controls">
-            <button @click="prevWord">Previous</button>
-            <button @click="nextWord">Next</button>
+            <button id="prev">Previous</button>
+            <button id="next">Next</button>
         </div>
     </div>
 
@@ -111,43 +106,39 @@
             { word: 'homework', definition: 'schoolwork done at home' }
         ];
 
-        const { createApp } = Vue;
+        let index = 0;
+        let flipped = false;
 
-        createApp({
-            data() {
-                return {
-                    words,
-                    index: 0,
-                    flipped: false
-                }
-            },
-            computed: {
-                currentWord() {
-                    return this.words[this.index] || null;
-                }
-            },
-            methods: {
-                flipCard() {
-                    this.flipped = !this.flipped;
-                },
-                nextWord() {
-                    this.flipped = false;
-                    if (this.index < this.words.length - 1) {
-                        this.index++;
-                    } else {
-                        this.index = 0;
-                    }
-                },
-                prevWord() {
-                    this.flipped = false;
-                    if (this.index > 0) {
-                        this.index--;
-                    } else {
-                        this.index = this.words.length - 1;
-                    }
-                }
-            }
-        }).mount('#app');
+        const flashcard = document.querySelector('.flashcard');
+        const cardInner = flashcard.firstElementChild;
+        const front = cardInner.querySelector('.front');
+        const back = cardInner.querySelector('.back');
+
+        function render() {
+            const word = words[index];
+            front.textContent = word.word;
+            back.textContent = word.definition;
+            cardInner.classList.toggle('flipped', flipped);
+        }
+
+        flashcard.addEventListener('click', () => {
+            flipped = !flipped;
+            render();
+        });
+
+        document.getElementById('next').addEventListener('click', () => {
+            index = (index + 1) % words.length;
+            flipped = false;
+            render();
+        });
+
+        document.getElementById('prev').addEventListener('click', () => {
+            index = (index - 1 + words.length) % words.length;
+            flipped = false;
+            render();
+        });
+
+        render();
     </script>
 </body>
 </html>
