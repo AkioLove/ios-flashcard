@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Web POC</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+    <div id="app">
+        <h1>Vocabulary Flashcards</h1>
+        <div class="flashcard" v-if="currentWord" @click="flipCard">
+            <div :class="{flipped: flipped}">
+                <div class="front">
+                    {{ currentWord.word }}
+                </div>
+                <div class="back">
+                    {{ currentWord.definition }}
+                </div>
+            </div>
+        </div>
+        <div class="controls">
+            <button @click="prevWord">Previous</button>
+            <button @click="nextWord">Next</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
